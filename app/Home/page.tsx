@@ -79,7 +79,7 @@ const Page: React.FC = () => {
       const response = await axios.get('/api/gmail/fetch');
       console.log('Gmail fetch response:', response.data);
       await mutate();
-      alert(`Successfully fetched ${response.data.emails?.length || 0} emails`);
+      // alert(`Successfully fetched ${response.data.emails?.length || 0} emails`);
     } catch (error: any) {
       console.error('Failed to fetch Gmail emails:', error);
       alert(`Failed to fetch Gmail emails: ${error.response?.data?.error || error.message}`);
