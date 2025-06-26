@@ -6,8 +6,8 @@ export default async function Page() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    redirect("/login"); // 🔁 Redirect to /login if no session
+    redirect("/login"); 
   }
 
-  redirect("/home") // ✅ Show inbox if logged in
+  redirect("/home") 
 }

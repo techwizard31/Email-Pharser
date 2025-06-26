@@ -1,9 +1,14 @@
 import GoogleProvider from "next-auth/providers/google";
-import { NextAuthOptions, Session } from "next-auth";
+import { NextAuthOptions } from "next-auth";
 
-// Extend the Session type to include accessToken
+// 🔧 Extend types (if you're using TypeScript)
 declare module "next-auth" {
   interface Session {
+    accessToken?: string;
+  }
+}
+declare module "next-auth/jwt" {
+  interface JWT {
     accessToken?: string;
   }
 }
@@ -22,13 +27,13 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, account }) {
-      if (account) {
+      if (account?.access_token) {
         token.accessToken = account.access_token;
       }
       return token;
     },
     async session({ session, token }) {
-      session.accessToken = typeof token.accessToken === "string" ? token.accessToken : undefined;
+      session.accessToken = token.accessToken as string;
       return session;
     },
   },
