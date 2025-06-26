@@ -85,7 +85,7 @@ const Home: React.FC = () => {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <span className="text-white text-sm font-bold">M</span>
               </div>
-              <h1 className="text-xl font-semibold hidden sm:block">Mail</h1>
+              <h1 className="text-xl font-semibold hidden sm:block">Mailyzer</h1>
             </div>
           </div>
 

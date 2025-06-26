@@ -1,26 +1,24 @@
-import { NextResponse } from 'next/server';
 import { connectToDB } from '../../../../db';
-import { EmailLog } from '@/app/model';
+import { EmailLog } from '../../../../model';
+import { NextResponse } from 'next/server';
 
-// Access the dynamic route param using the second argument `{ params }`
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(_: Request, { params }: { params: { id: string } }) {
   await connectToDB();
 
-  try {
-    const updated = await EmailLog.findByIdAndUpdate(params.id, {
-      status: 'manual',
-      error: ''
-    });
-
-    if (!updated) {
-      return NextResponse.json({ success: false, message: 'Email not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ success: true, email: updated });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  const email = await EmailLog.findById(params.id);
+  if (!email) {
+    return NextResponse.json({ success: false, message: 'Email not found' }, { status: 404 });
   }
+
+  // Re-parse the saved preview/body again for claim/policy number
+  const claimRegex = /(claim|policy)[\s\-#:]*([A-Z0-9\-]+)/i;
+  const match = email.preview.match(claimRegex);
+  const claimNumber = match ? match[2] : undefined;
+
+  email.claimNumber = claimNumber;
+  email.status = claimNumber ? 'success' : 'manual';
+  email.error = '';
+  await email.save();
+
+  return NextResponse.json({ success: true, email });
 }
