@@ -2,39 +2,49 @@ import { connectToDB } from '../../../db';
 import { EmailLog } from '../../../model';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+// GET single email
+export async function GET(_: Request, context: { params: { id: string } }) {
   await connectToDB();
-  const email = await EmailLog.findById(params.id);
-  if (!email) {
-    return NextResponse.json({ error: 'Email not found' }, { status: 404 });
+  const { id } = context.params;
+
+  try {
+    const email = await EmailLog.findById(id);
+    if (!email) {
+      return NextResponse.json({ error: 'Email not found' }, { status: 404 });
+    }
+    return NextResponse.json({ email });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
-  return NextResponse.json({ email });
 }
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+// DELETE email
+export async function DELETE(_: Request, context: { params: { id: string } }) {
   await connectToDB();
+  const { id } = context.params;
+
   try {
-    await EmailLog.findByIdAndDelete(params.id);
+    await EmailLog.findByIdAndDelete(id);
     return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
 
-// NEW: Accept raw email content, extract claim number, and save
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+// POST: Save new email by ID (if not already present)
+export async function POST(req: NextRequest, context: { params: { id: string } }) {
   await connectToDB();
+  const { id } = context.params;
 
   try {
     const { sender, subject, body, time } = await req.json();
 
-    // Simple regex to extract claim/policy number (customize this!)
     const claimRegex = /(claim|policy)[\s\-#:]*([A-Z0-9\-]+)/i;
     const match = body.match(claimRegex);
     const claimNumber = match ? match[2] : undefined;
 
     const emailData = {
-      messageId: params.id,
+      messageId: id,
       sender,
       subject,
       preview: body.slice(0, 150),
@@ -43,7 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       status: claimNumber ? 'success' : 'manual',
     };
 
-    const exists = await EmailLog.findOne({ messageId: params.id });
+    const exists = await EmailLog.findOne({ messageId: id });
     if (exists) {
       return NextResponse.json({ success: false, message: 'Already exists' }, { status: 409 });
     }
