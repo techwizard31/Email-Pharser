@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   oauth2Client.setCredentials({ access_token: session.accessToken });
 
   const gmail = google.gmail({ version: "v1", auth: oauth2Client });
-  const list = await gmail.users.messages.list({ userId: "me", maxResults: 10 });
+  const list = await gmail.users.messages.list({ userId: "me", maxResults: 100 });
 
   const messages = await Promise.all(
     list.data.messages?.map(async (msg) => {
