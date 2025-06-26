@@ -9,12 +9,12 @@ export default function Login() {
     setIsLoading(true);
     try {
       const result = await signIn('google', { 
-        callbackUrl: '/Home',
+        callbackUrl: '/home', 
         redirect: false 
       });
       
       if (result?.ok) {
-        window.location.href = '/home';
+        window.location.href = '/home'; 
       } else {
         console.error('Login failed:', result?.error);
       }
@@ -39,7 +39,7 @@ export default function Login() {
         <button
           onClick={handleGoogleLogin}
           disabled={isLoading}
-          className="w-full bg-white hover:bg-gray-50 text-gray-900 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-white hover:bg-gray-50 text-gray-900 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {isLoading ? (
             <div className="w-5 h-5 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
