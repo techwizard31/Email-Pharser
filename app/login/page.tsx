@@ -1,4 +1,3 @@
-// app/login/page.tsx or any login component
 'use client';
 
 import { GoogleLogin } from '@react-oauth/google';
@@ -12,7 +11,7 @@ export default function Login() {
           await axios.post('/api/auth/', {
             credential: credentialResponse.credential,
           });
-          window.location.href = '/'; // redirect to inbox
+          window.location.href = '/';
         }}
         onError={() => console.log('Login Failed')}
       />
