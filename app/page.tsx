@@ -1,103 +1,243 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import React, { useState } from 'react';
+import useSWR from 'swr';
+import axios from 'axios';
+import Link from 'next/link';
+
+import {
+  Search, Menu, Settings, HelpCircle, Star, Archive, Delete,
+  MoreHorizontal, ChevronDown, Paperclip, Send, Inbox,
+  Users, Tag, AlertCircle, Trash2, Edit3, RefreshCw
+} from 'lucide-react';
+
+interface Email {
+  _id: string;
+  sender: string;
+  subject: string;
+  preview: string;
+  time: string;
+  claimNumber?: string;
+  status: 'success' | 'manual' | 'error';
+  error?: string;
+}
+
+const fetcher = (url: string) => axios.get(url).then(res => res.data.emails);
+
+const Home: React.FC = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [activeFolder, setActiveFolder] = useState('inbox');
+
+  const { data: emails = [], isLoading, mutate } = useSWR('/api/emails', fetcher);
+
+  const sidebarItems = [
+    { icon: <Inbox size={20} />, label: 'Inbox', count: emails.length, isActive: activeFolder === 'inbox' },
+    { icon: <Star size={20} />, label: 'Starred' },
+    { icon: <Send size={20} />, label: 'Sent' },
+    { icon: <Edit3 size={20} />, label: 'Drafts' },
+    { icon: <Archive size={20} />, label: 'Archive' },
+    { icon: <AlertCircle size={20} />, label: 'Spam' },
+    { icon: <Trash2 size={20} />, label: 'Trash' },
+    { icon: <Users size={20} />, label: 'Social' },
+    { icon: <Tag size={20} />, label: 'Promotions' },
+  ];
+
+  const toggleEmailSelection = (id: string) => {
+    setSelectedEmails(prev =>
+      prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllEmails = () => {
+    setSelectedEmails(selectedEmails.length === emails.length ? [] : emails.map((e: { _id: any; }) => e._id));
+  };
+
+  const retryEmails = async () => {
+    for (const id of selectedEmails) {
+      await axios.post(`/api/emails/retry/${id}`);
+    }
+    await mutate();
+    setSelectedEmails([]);
+  };
+
+  const deleteEmails = async () => {
+    for (const id of selectedEmails) {
+      await axios.delete(`/api/emails/${id}`);
+    }
+    await mutate();
+    setSelectedEmails([]);
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="h-screen bg-black text-white flex flex-col overflow-hidden">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-b border-violet-800/30 px-4 py-3 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden text-white hover:bg-violet-800/30 p-2 rounded-lg transition-colors"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white text-sm font-bold">M</span>
+              </div>
+              <h1 className="text-xl font-semibold hidden sm:block">Mail</h1>
+            </div>
+          </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          <div className="flex-1 max-w-2xl mx-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Search mail" 
+                className="w-full bg-slate-800/50 border border-violet-800/30 rounded-lg px-10 py-2.5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all"
+              />
+              <button className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors">
+                <Settings size={18} />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <button className="text-gray-400 hover:text-white transition-colors hidden sm:block">
+              <HelpCircle size={20} />
+            </button>
+            <button className="text-gray-400 hover:text-white transition-colors hidden sm:block">
+              <Settings size={20} />
+            </button>
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center">
+              <span className="text-white text-sm font-medium">U</span>
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:relative z-30 w-64 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-violet-800/30 transition-transform duration-300 ease-in-out h-full overflow-y-auto`}>
+          <div className="p-4">
+            <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg px-4 py-3 font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
+              <Edit3 className="inline mr-2" size={18} />
+              Compose
+            </button>
+          </div>
+          <nav className="px-2">
+            {sidebarItems.map((item, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveFolder(item.label.toLowerCase())}
+                className={`w-full flex items-center justify-between px-4 py-3 mb-1 rounded-lg transition-all duration-200 ${
+                  item.isActive 
+                    ? 'bg-gradient-to-r from-violet-800/50 to-blue-800/50 text-white shadow-md' 
+                    : 'hover:bg-violet-800/20 text-gray-300 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  {item.icon}
+                  <span className="font-medium">{item.label}</span>
+                </div>
+                {item.count !== undefined && (
+                  <span className="bg-violet-700/50 text-violet-200 text-xs px-2 py-1 rounded-full">
+                    {item.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 flex flex-col overflow-hidden">
+          {/* Toolbar */}
+          <div className="bg-gradient-to-r from-slate-800 to-slate-700 border-b border-violet-800/30 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={selectedEmails.length === emails.length}
+                  onChange={selectAllEmails}
+                  className="rounded border-violet-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
+                />
+                <button className="text-gray-400 hover:text-white transition-colors">
+                  <ChevronDown size={16} />
+                </button>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button onClick={() => mutate()} className="text-gray-400 hover:text-white p-2 hover:bg-violet-800/20 rounded">
+                  <RefreshCw size={16} />
+                </button>
+                <button onClick={retryEmails} className="text-gray-400 hover:text-white p-2 hover:bg-violet-800/20 rounded">
+                  <Archive size={16} />
+                </button>
+                <button onClick={deleteEmails} className="text-gray-400 hover:text-white p-2 hover:bg-violet-800/20 rounded">
+                  <Delete size={16} />
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-400">
+              <span>{`1-${emails.length} of ${emails.length}`}</span>
+            </div>
+          </div>
+
+          {/* Email List */}
+          <div className="flex-1 overflow-y-auto">
+            {isLoading ? (
+              <p className="text-center py-10 text-gray-400">Loading emails...</p>
+            ) : (
+              emails.map((email:Email) => (
+                <Link href={`/email/${email._id}`} key={email._id}>
+                  <div className="border-b border-violet-800/20 px-4 py-4 hover:bg-gradient-to-r hover:from-slate-800/50 hover:to-violet-900/20 transition-all cursor-pointer">
+                    <div className="flex items-center space-x-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedEmails.includes(email._id)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          toggleEmailSelection(email._id);
+                        }}
+                        className="rounded border-violet-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center space-x-3 min-w-0 flex-1">
+                            <span className="font-medium truncate text-white">
+                              {email.sender}
+                            </span>
+                            {email.status === 'manual' && (
+                              <span className="text-xs bg-yellow-600 text-white px-2 py-0.5 rounded">
+                                Manual
+                              </span>
+                            )}
+                            {email.status === 'error' && (
+                              <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded">
+                                Error
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-sm text-gray-400 flex-shrink-0 ml-4">
+                            {email.time}
+                          </span>
+                        </div>
+                        <div className="mb-1">
+                          <span className="text-sm text-gray-300">{email.subject}</span>
+                        </div>
+                        <p className="text-sm text-gray-500 truncate">{email.preview}</p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   );
-}
+};
+
+export default Home;
