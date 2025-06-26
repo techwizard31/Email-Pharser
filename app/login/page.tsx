@@ -11,7 +11,7 @@ export default function Login() {
           await axios.post('/api/auth/', {
             credential: credentialResponse.credential,
           });
-          window.location.href = '/';
+          window.location.href = '/Home';
         }}
         onError={() => console.log('Login Failed')}
       />
