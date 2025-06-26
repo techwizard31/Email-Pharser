@@ -1,10 +1,11 @@
-'use client';
+"use client";
 
 import React, { useState } from 'react';
 import useSWR from 'swr';
 import axios from 'axios';
 import Link from 'next/link';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import {
   Search, Menu, Settings, HelpCircle, Star, Archive, Delete,
   MoreHorizontal, ChevronDown, Paperclip, Send, Inbox,
@@ -25,11 +26,21 @@ interface Email {
 const fetcher = (url: string) => axios.get(url).then(res => res.data.emails);
 
 const Page: React.FC = () => {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [activeFolder, setActiveFolder] = useState('inbox');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { data: emails = [], isLoading, mutate } = useSWR('/api/emails', fetcher);
+  const { data: emails = [], isLoading: emailsLoading, mutate } = useSWR('/api/emails', fetcher);
+
+  // Redirect to login if not authenticated
+  if (status === 'loading') return <div>Loading...</div>;
+  if (status === 'unauthenticated') {
+    router.push('/login');
+    return null;
+  }
 
   const toggleEmailSelection = (id: string) => {
     setSelectedEmails(prev =>
@@ -63,11 +74,17 @@ const Page: React.FC = () => {
   };
 
   const fetchGmailEmails = async () => {
+    setIsLoading(true);
     try {
-      await axios.get('/api/gmail/fetch');
+      const response = await axios.get('/api/gmail/fetch');
+      console.log('Gmail fetch response:', response.data);
       await mutate();
-    } catch (error) {
-      alert('Failed to fetch Gmail emails');
+      alert(`Successfully fetched ${response.data.emails?.length || 0} emails`);
+    } catch (error: any) {
+      console.error('Failed to fetch Gmail emails:', error);
+      alert(`Failed to fetch Gmail emails: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -120,13 +137,19 @@ const Page: React.FC = () => {
 
           {/* Profile & Logout */}
           <div className="flex items-center space-x-3">
+            <span className="text-sm text-gray-300 hidden sm:block">
+              {session?.user?.email}
+            </span>
             <button className="text-gray-400 hover:text-white transition-colors hidden sm:block">
               <HelpCircle size={20} />
             </button>
             <button className="text-gray-400 hover:text-white transition-colors hidden sm:block">
               <Settings size={20} />
             </button>
-            <button onClick={() => signOut()} className="text-sm text-red-400 hover:underline">
+            <button 
+              onClick={() => signOut({ callbackUrl: '/login' })} 
+              className="text-sm text-red-400 hover:underline"
+            >
               Logout
             </button>
           </div>
@@ -137,9 +160,13 @@ const Page: React.FC = () => {
         {/* Sidebar */}
         <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:relative z-30 w-64 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-violet-800/30 transition-transform duration-300 ease-in-out h-full overflow-y-auto`}>
           <div className="p-4">
-            <button onClick={fetchGmailEmails} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg px-4 py-3 font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
-              <RefreshCw className="inline mr-2" size={18} />
-              Sync Gmail
+            <button 
+              onClick={fetchGmailEmails} 
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-lg px-4 py-3 font-medium transition-all duration-200 transform hover:scale-105 shadow-lg disabled:transform-none disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`inline mr-2 ${isLoading ? 'animate-spin' : ''}`} size={18} />
+              {isLoading ? 'Syncing...' : 'Sync Gmail'}
             </button>
           </div>
           <nav className="px-2">
@@ -199,8 +226,14 @@ const Page: React.FC = () => {
 
           {/* Email List */}
           <div className="flex-1 overflow-y-auto">
-            {isLoading ? (
+            {emailsLoading ? (
               <p className="text-center py-10 text-gray-400">Loading emails...</p>
+            ) : emails.length === 0 ? (
+              <div className="text-center py-20 text-gray-400">
+                <Inbox size={48} className="mx-auto mb-4 opacity-50" />
+                <p className="text-lg mb-2">No emails found</p>
+                <p className="text-sm">Click "Sync Gmail" to fetch your emails</p>
+              </div>
             ) : (
               emails.map((email: Email) => (
                 <Link href={`/email/${email._id}`} key={email._id}>
